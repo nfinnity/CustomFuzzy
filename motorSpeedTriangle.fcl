@@ -1,0 +1,73 @@
+/*
+	Example: A tip calculation FIS (fuzzy inference system)
+	Calculates tip based on 'servie' and 'food'
+
+	If you want to about this example (and fuzzy logic), please 
+	read Matlab's tutorial on fuzzy logic toolbox 
+	http://www.mathworks.com/access/helpdesk/help/pdf_doc/fuzzy/fuzzy.pdf
+
+									Pablo Cingolani 
+									pcingola@users.sourceforge.net
+*/
+
+FUNCTION_BLOCK fanSpeed	// Block definition (there may be more than one block per file)
+
+VAR_INPUT				// Define input variables
+	currentTemp : REAL;
+	targetTemp : REAL;
+END_VAR
+
+VAR_OUTPUT				// Define output variable
+	motorOutput : REAL;
+END_VAR
+
+FUZZIFY currentTemp			// Fuzzify input variable 'currentTemp': {'cold', 'cool', 'warm', 'hot'}
+	TERM cold := trian -0.001 1.5 3;
+	TERM cool := trian 2 3.5 5;
+	TERM warm := trian 4 5.5 7;
+	TERM hot := trian 6 7.5 9.01;
+END_FUZZIFY
+
+FUZZIFY targetTemp		// Fuzzify input variable 'targetTemp': {'cold', 'cool', 'warm', 'hot'}
+	TERM cold := trian -0.001 1.5 3;
+	TERM cool := trian 2 3.5 5; 
+	TERM warm := trian 4 5.5 7;
+	TERM hot := trian 6 7.5 9.01;
+END_FUZZIFY
+
+DEFUZZIFY motorOutput			// Defuzzify output variable 'tip' : {'highCoolSpeed', 'lowCoolSpeed', 'lowHeatSpeed', 'highHeatSpeed' }
+	TERM highCoolSpeed := (0,0) (5,1) (10,0);
+	TERM lowCoolSpeed := (5,0) (10,1) (15,0);
+	TERM lowHeatSpeed := (10,0) (15,1) (20,0);
+	TERM highHeatSpeed := (15, 0) (20, 1 ) (25, 0);
+	TERM noChange := (0, 0);
+	METHOD : COG;		// Use 'Center Of Gravity' defuzzification method
+	DEFAULT := 0;		// Default value is 0 (if no rule activates defuzzifier)
+END_DEFUZZIFY
+
+RULEBLOCK No1
+	AND : MIN;			// Use 'min' for 'and' (also implicit use 'max' for 'or' to fulfill DeMorgan's Law)
+	ACT : MIN;			// Use 'min' activation method
+	ACCU : MAX;			// Use 'max' accumulation method
+
+	RULE 1 : IF targetTemp IS cold AND currentTemp IS cold THEN motorOutput IS noChange;
+	RULE 2 : IF targetTemp IS cold AND currentTemp IS cool THEN motorOutput IS lowCoolSpeed;
+	RULE 3 : IF targetTemp IS cold AND currentTemp IS warm THEN motorOutput IS highCoolSpeed;
+	RULE 4 : IF targetTemp IS cold AND currentTemp IS hot THEN motorOutput IS highCoolSpeed;
+	RULE 5 : IF targetTemp IS cool AND currentTemp IS cold THEN motorOutput IS lowHeatSpeed;
+	RULE 6 : IF targetTemp IS cool AND currentTemp IS cool THEN motorOutput IS noChange;
+	RULE 7 : IF targetTemp IS cool AND currentTemp IS warm THEN motorOutput IS lowCoolSpeed;
+	RULE 8 : IF targetTemp IS cool AND currentTemp IS hot THEN motorOutput IS highCoolSpeed;
+	RULE 9 : IF targetTemp IS warm AND currentTemp IS cold THEN motorOutput IS highHeatSpeed;
+	RULE 10 : IF targetTemp IS warm AND currentTemp IS cool THEN motorOutput IS lowHeatSpeed;
+	RULE 11 : IF targetTemp IS warm AND currentTemp IS warm THEN motorOutput IS noChange;
+	RULE 12 : IF targetTemp IS warm AND currentTemp IS hot THEN motorOutput IS lowCoolSpeed;
+	RULE 13 : IF targetTemp IS hot AND currentTemp IS cold THEN motorOutput IS highHeatSpeed;
+	RULE 14 : IF targetTemp IS hot AND currentTemp IS cool THEN motorOutput IS highHeatSpeed;
+	RULE 15 : IF targetTemp IS hot AND currentTemp IS warm THEN motorOutput IS lowHeatSpeed;
+	RULE 16 : IF targetTemp IS hot AND currentTemp IS hot THEN motorOutput IS noChange;
+	
+
+END_RULEBLOCK
+
+END_FUNCTION_BLOCK
